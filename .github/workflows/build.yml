@@ -1,0 +1,51 @@
+name: build
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: write # needed to create the release
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache apt packages (32-bit toolchain)
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: clang g++-multilib gcc-multilib zip
+          version: 1
+
+      - name: Cache SDK headers
+        id: sdk
+        uses: actions/cache@v4
+        with:
+          path: third_party
+          key: sdk-${{ hashFiles('deps.sh') }}
+
+      - name: Fetch SDK headers
+        if: steps.sdk.outputs.cache-hit != 'true'
+        run: ./deps.sh
+
+      - name: Build (runs the test first)
+        run: ./build.sh
+
+      - name: Package
+        run: cd dist && zip -qr ../rm-css-${{ github.ref_name }}.zip addons
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rm-css
+          path: dist/addons
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: rm-css-${{ github.ref_name }}.zip
+          generate_release_notes: true

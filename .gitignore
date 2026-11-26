@@ -1,0 +1,8 @@
+# build output and fetched SDK (./deps.sh, ./build.sh)
+dist/
+third_party/
+*.so
+*.zip
+*.dmp
+obj*/
+.cache/
